@@ -1,0 +1,9 @@
+1. set up conda + install quimb (+ deps)
+
+2. Read and understand https://quimb.readthedocs.io/en/latest/examples/ex_quantum_circuit.html
+
+(look at other pages if needed)
+
+3. Build (any) quantum circuit using step 2.
+
+4. Use quimb to evaluate an expectation value of a pauli string (either measurement string/pauli operator)

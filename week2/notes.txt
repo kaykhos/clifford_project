@@ -1,0 +1,3 @@
+1. Calculate expectation value for Ising model (H = J sum_{NN} Z_iZ_j) for a given circuit.
+
+2. Randomly sample Clifford circuits and calculate <H> for each one. (E.g. only change single qubit gates, not their locations in the circuit)
