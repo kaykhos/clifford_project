@@ -49,9 +49,12 @@ circ.psi.select(['CNOT', 'I3', 'ROUND_3'], which='all')
 list(qtn.circuit.GATE_FUNCTIONS)
 
 circ.amplitude('1101010101')
+
 circ.local_expectation(qu.pauli('Z'), (4)) + \
     circ.local_expectation(qu.pauli('Z'), (5))
+
 circ.local_expectation(qu.pauli('Z') & qu.pauli('Z'), (4, 5))
+
 circ.local_expectation(
     [qu.pauli('X') & qu.pauli('X'),
      qu.pauli('Y') & qu.pauli('Y'),
