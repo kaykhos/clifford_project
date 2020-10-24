@@ -60,24 +60,3 @@ circ.local_expectation(
 )
 circ.local_expectation(qu.pauli('Z'), 0) + \
     circ.local_expectation(qu.pauli('Z'), 1)
-
-# %%
-circ_param = qtn.Circuit(6)
-
-for l in range(3):
-    for i in range(0, 6, 2):
-        circ_param.apply_gate('FSIM', random.random(), random.random(
-        ), i, i + 1, parametrize=True, contract=False)
-    for i in range(1, 5, 2):
-        circ_param.apply_gate('FSIM', random.random(), random.random(
-        ), i, i + 1, parametrize=True, contract=False)
-    for i in range(6):
-        circ_param.apply_gate('U3', random.random(
-        ), random.random(), random.random(), i, parametrize=True)
-
-circ_param.psi.graph(color=['PSI0', 'FSIM', 'U3'])
-
-circ_param.psi['GATE_0']
-circ_param.amplitude('101001')
-
-circ_param.local_expectation(qu.pauli('Z') & qu.pauli('Z'), (4, 5))
