@@ -1,3 +1,9 @@
+# qiskit                             0.19.6
+# qiskit-aer                         0.5.2
+# qiskit-aqua                        0.7.3
+# qiskit-ibmq-provider               0.7.2
+# qiskit-ignis                       0.3.3
+# qiskit-terra                       0.14.2
 from qiskit.quantum_info import Clifford
 from qiskit.aqua.operators import PauliExpectation, CircuitSampler, StateFn
 from qiskit.aqua import QuantumInstance
@@ -10,7 +16,7 @@ from qiskit.optimization.converters import QuadraticProgramToIsing
 from qiskit import QuantumCircuit
 from qiskit.aqua.operators import StateFn
 
-
+qiskit.__version__
 # Prepare the Ising Hamiltonian
 n = 3  # number of qubits
 a = 1.0
