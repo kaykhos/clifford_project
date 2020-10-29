@@ -71,14 +71,22 @@ print(H.print_details())
 
 
 # Bell state generation circuit
-qc = QuantumCircuit(4)
-qc.h(0)
-qc.cx(0, 1)
-qc.cx(0, 2)
-qc.cx(0, 3)
-cliff = Clifford(qc)
-cliff_circ = cliff.to_circuit()
+# qc = QuantumCircuit(4)
+# qc.h(0)
+# qc.cx(0, 1)
+# qc.cx(0, 2)
+# qc.cx(0, 3)
+# cliff = Clifford(qc)
+# cliff_circ = cliff.to_circuit()
+# cliff_sf = StateFn(cliff_circ)
+
+
+cliff_op = qiskit.quantum_info.random_clifford(4)
+print(cliff_op)
+
+cliff_circ = cliff_op.to_circuit()
 cliff_sf = StateFn(cliff_circ)
+
 
 # Print the Clifford
 print(cliff)
