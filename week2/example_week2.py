@@ -1,9 +1,9 @@
-# qiskit                             0.19.6
-# qiskit-aer                         0.5.2
-# qiskit-aqua                        0.7.3
-# qiskit-ibmq-provider               0.7.2
-# qiskit-ignis                       0.3.3
-# qiskit-terra                       0.14.2
+# qiskit                0.23.0
+# qiskit-aer            0.7.0
+# qiskit-aqua           0.8.0
+# qiskit-ibmq-provider  0.11.0
+# qiskit-ignis          0.5.0
+# qiskit-terra          0.16.0
 from qiskit.quantum_info import Clifford
 from qiskit.aqua.operators import PauliExpectation, CircuitSampler, StateFn
 from qiskit.aqua import QuantumInstance
@@ -33,8 +33,9 @@ qp.from_docplex(mdl)
 
 qp2ising = QuadraticProgramToIsing()  # convert to Ising Hamiltonian
 H, offset = qp2ising.encode(qp)
-op = H.to_opflow()
-# help(H)
+op = H.to_pauli_op()
+help(H)
+print(H)
 
 # Prepare the state
 qc = QuantumCircuit(3)
@@ -120,7 +121,7 @@ qp.from_docplex(mdl)
 
 qp2ising = QuadraticProgramToIsing()  # convert to Ising Hamiltonian
 H, offset = qp2ising.encode(qp)
-op = H.to_opflow()
+op = H.to_pauli_op()
 
 print('expectation_value:', cliff_sf.adjoint().compose(
     op).compose(cliff_sf).eval().real)
