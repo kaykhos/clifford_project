@@ -10,6 +10,7 @@ from qiskit.aqua import QuantumInstance
 from qiskit import Aer
 import numpy as np
 import qiskit
+import random
 from docplex.mp.model import Model
 from qiskit.optimization.problems import QuadraticProgram
 from qiskit.optimization.converters import QuadraticProgramToIsing
@@ -76,33 +77,75 @@ print(H.print_details())
 # %% Randomly sample Clifford circuits and calculate <H> for each one.
 # (E.g. only change single qubit gates, not their locations in the circuit)
 
+# import random
+# import quimb.tensor as qtn
+# import quimb as qu
+# %config InlineBackend.figure_formats = ['svg']
+#
+# cliff_circ = qtn.Circuit(N=4, tags='PSI0')
+#
+# # initial layer of hadamards
+# for i in range(4):
+#     cliff_circ.apply_gate('H', i, gate_round=0)
+#
+# # # 8 rounds of entangling gates
+# for r in range(1, 3):
+#     #
+#     # even pairs
+#     for i in range(0, 4, 2):
+#         cliff_circ.apply_gate('CNOT', i, i + 1, gate_round=r)
+#     #
+#     # Y-rotations
+#     for i in range(4):
+#         cliff_circ.apply_gate('RY', 1.234, i, gate_round=r)
+# #
+#     # odd pairs
+#     for i in range(1, 3, 2):
+#         cliff_circ.apply_gate('CZ', i, i + 1, gate_round=r)
+#
+# # final layer of hadamards
+# for i in range(4):
+#     cliff_circ.apply_gate('H', i, gate_round=r + 1)
 
-# Bell state generation circuit
-# qc = QuantumCircuit(4)
-# qc.h(0)
-# qc.cx(0, 1)
-# qc.cx(0, 2)
-# qc.cx(0, 3)
-# cliff = Clifford(qc)
-# cliff_circ = cliff.to_circuit()
-# cliff_sf = StateFn(cliff_circ)
 
+qc = QuantumCircuit(4)
 
-cliff_op = qiskit.quantum_info.random_clifford(4)
-print(cliff_op)
+param = random.randint(0, 5)
+print(param)
+if param == 0:
+    qc.id(0)
+elif param == 1:
+    qc.H(0)
+elif param == 2:
+    qc.s(0)
+elif param == 3:
+    qc.x(0)
+elif param == 4:
+    qc.y(0)
+else:
+    qc.z(0)
 
-cliff_circ = cliff_op.to_circuit()
+qc.cx(0, 1)
+qc.swap(1, 3)
+
+cliff = Clifford(qc)
+cliff_circ = cliff.to_circuit()
 cliff_sf = StateFn(cliff_circ)
+print(cliff_circ)
+# help(cliff)
+# cliff_op = qiskit.quantum_info.random_clifford(4)
+# print(cliff_op)
+#
+# # cliff_circ = cliff_op.to_circuit()
+# cliff_dense= cliff_circ.to_dense()  # representing circuit in the form of ndarray
+# cliff_operator = qiskit.aqua.operators.legacy.MatrixOperator(cliff_dense)
+# cliff_detail= cliff_operator.print_details()
+
+# cliff_sf = StateFn(cliff_operator)
 
 
 # Print the Clifford
-print(cliff)
-print(cliff_circ)
-# Print the Clifford destabilizer rows
-print(cliff.destabilizer)
 
-# Print the Clifford stabilizer rows
-print(cliff.stabilizer)
 
 #
 # Prepare the Ising Hamiltonian
