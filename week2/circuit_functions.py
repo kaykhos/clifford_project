@@ -11,10 +11,12 @@ import qiskit as qk
 import numpy as np
 
 def newCircuit(nb_qubits =4 , 
-               depth = 1):
+               depth = 1,
+               verbose = False):
     """
     Creates a new random 'cliffod' circuit"""
-    Warning("Currently only makes a reduced Clifford circuit")
+    if verbose:
+        Warning("Currently only makes a reduced Clifford circuit")
     
     # Construct circuit
     circuit = qk.QuantumCircuit(nb_qubits)
@@ -48,17 +50,21 @@ def newCircuit(nb_qubits =4 ,
     # Loop though and alternate rotation and entangelment layers
     for ii in range(depth):
         entangle_layer(circuit)
-        circuit.barrier()
+        circuit.barrier() # this just makes circ.draw() look better
         rotaiton_layer(circuit)
+    if verbose:
+        print(circuit)
     return circuit
 
 
-def updateCircuit(circuit):
+def updateCircuit(circuit,
+                  verbose = False):
     """
     Takes an input circuit and switches exactly 1 single qubit gate to something 
     else. (Only tested with circuis made with newCircuit())
     """
-    Warning("Currently only replaces to h,s,x,y,z gates")
+    if verbose:
+        Warning("Currently only replaces to h,s,x,y,z gates")
     possible_gates = list('hsxyz')
     
     # Convert circuit to qasm string so we can use string processing to switch
@@ -78,9 +84,12 @@ def updateCircuit(circuit):
     
     qasm[gate_to_switch] = '\n' + new_gate + ' ' + qasm[gate_to_switch].split(' ')[1]
     
-    qasm = '; '.join(qasm)    
+    qasm = ';'.join(qasm)    
     circuit = qk.QuantumCircuit.from_qasm_str(qasm)
     
+    if verbose:
+        print(circuit)
+        
     return circuit
 
 
@@ -88,7 +97,7 @@ def updateCircuit(circuit):
 if __name__ == '__main__':
     
     # Create circuit
-    circuit = newCircuit(4, 4)
+    circuit = newCircuit(4, 4, True)
     
     # Update it 50 times and check for errors
     for ii in range(50):
