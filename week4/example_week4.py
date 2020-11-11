@@ -65,7 +65,8 @@ print(qc)
 
 def overlap_modules_square(psi_2):
     psi_1 = cliff_sf_target
-    return (psi_1.adjoint().compose(psi_2).eval().real) * (psi_2.adjoint().compose(psi_1).eval().real)
+    # return (psi_1.adjoint().compose(psi_2).eval().real) * (psi_2.adjoint().compose(psi_1).eval().real)
+    return np.real((~psi_1 @ psi_2).eval() * (~psi_2 @ psi_1).eval())
 
 
 # radom apply GATE_FUNCTIONS
@@ -182,53 +183,17 @@ for j in range(1000):
 
 
 # %%
-print(E2)
-print(t)
-print(E)
+# print(E2)
+# print(t)
+# print(E)
 print(qc_result)
-plt.xlabel('time')
 
+plt.figure(figsize=(18, 16), dpi=100)
+plt.xlabel('time')
 plt.ylabel('E')
-plt.plot(t, E)
+plt.plot(t, E, marker='o', markerfacecolor='blue',
+         markersize=5, color='skyblue')
+plt.savefig(fname="Evst.png", figsize=(18, 16), dpi=100)
 
 
 # %%
-
-n = 8
-gate_list = ['qr.u1', 'qr.u2', 'qr.u3', 'qr.id',
-             'qr.x', 'qr.y', 'qr.z', 'qr.h', 'qr.s']
-
-selected_gates = []
-
-for i in range(1):
-    x = random.choice(gate_list)
-    a = '({})'.format(i)
-    k = x + a
-    selected_gates.append(k)
-
-print(selected_gates)
-qr = QuantumCircuit(8)
-exec(k)
-
-qr.draw()
-
-w = []
-print(operations)
-gate_list = ['qc_new.id', 'qc_new.x', 'qc_new.y',
-             'qc_new.z', 'qc_new.h', 'qc_new.s']
-
-
-def random_apply_gate(n):
-    random_gate = random.choice(gate_list)
-    a = '({})'.format(n)
-    k = random_gate + a
-    w.insert(0, k)
-    print(k)
-    exec(k)
-
-
-print(qc_initial)
-random_apply_gate(0)
-print(qc_result)
-qc_new = qc_initial
-print(w)
