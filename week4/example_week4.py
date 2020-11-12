@@ -4,6 +4,8 @@
 # qiskit-ibmq-provider  0.11.0
 # qiskit-ignis          0.5.0
 # qiskit-terra          0.16.0
+import sys
+import circuit_functions
 from qiskit.quantum_info import Clifford
 from qiskit import Aer
 import numpy as np
@@ -14,7 +16,7 @@ from qiskit import QuantumCircuit
 from qiskit.aqua.operators import StateFn
 import matplotlib.pyplot as plt
 qiskit.__qiskit_version__
-
+sys.path.append("/Users/arthur/Desktop/physics/MSci/clifford_project/week4")
 # %% generation of a traget state, including randomly select a single qubit gate
 qc = QuantumCircuit(4)
 qc_initial = qc.copy('qc_initial')
@@ -189,11 +191,49 @@ for j in range(1000):
 print(qc_result)
 
 plt.figure(figsize=(18, 16), dpi=100)
-plt.xlabel('time')
-plt.ylabel('E')
+plt.xlabel('time', fontsize=20)
+plt.ylabel('E', fontsize=20)
+plt.xticks(fontsize=20)
+plt.yticks(fontsize=20)
 plt.plot(t, E, marker='o', markerfacecolor='blue',
          markersize=5, color='skyblue')
 plt.savefig(fname="Evst.png", figsize=(18, 16), dpi=100)
 
 
+# %%
+def overlap_modules_square(psi_1, psi_2):
+
+    # return (psi_1.adjoint().compose(psi_2).eval().real) * (psi_2.adjoint().compose(psi_1).eval().real)
+    return np.real((~psi_1 @ psi_2).eval() * (~psi_2 @ psi_1).eval())
+
+
+qc1 = circuit_functions.newCircuit(4, 1)
+sf_t = StateFn(qc1)
+qc1_E = [1]
+qc1_t = [0]
+qc1_E1 = 1
+for a in range(3000):
+    qc1 = circuit_functions.updateCircuit(qc1)
+    sf_o = StateFn(qc1)
+    qc1_E2 = 1 - overlap_modules_square(sf_t, sf_o)
+    if qc1_E2 < qc1_E1:
+        P = 1
+    else:
+        beta = 10
+        P = np.exp(beta * (qc1_E1 - qc1_E2))
+    random_prob = random.random()
+    if random_prob < P:
+        qc1_E1 = qc1_E2
+        qc1_E.append(qc1_E2)
+        qc1_t.append(a + 1)
+
+print(qc1)
+plt.figure(figsize=(18, 16), dpi=100)
+plt.xlabel('time', fontsize=20)
+plt.ylabel('E', fontsize=20)
+plt.xticks(fontsize=20)
+plt.yticks(fontsize=20)
+plt.plot(qc1_t, qc1_E, marker='o', markerfacecolor='blue',
+         markersize=5, color='skyblue')
+plt.savefig(fname="Evst1.png", figsize=(18, 16), dpi=100)
 # %%
