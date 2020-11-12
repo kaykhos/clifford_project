@@ -6,16 +6,21 @@ Created on Wed Nov 11 14:54:26 2020
 @author: kiran
 
 Some code copied from qcoptim to generate circuits
+
+TODO: How does U3 impliment total phases?
 """
+
+#%% Imports
 import qiskit as qk
 import numpy as np
-import itertools as it
 
 
 # Need in this name space for qiskits eval() of parameters
 pi = np.pi
 
 
+
+#%% Function deffinitions
 def newCircuit(nb_qubits = 4, 
                depth = 1,
                verbose = False):
@@ -111,7 +116,7 @@ def _newCliffordParams(count=1):
         return params
         
 
-# Quick test to make sure everyhing goes smoothly
+#%% Quick test to make sure everyhing goes smoothly
 if __name__ == '__main__':
     
     # Create circuit
