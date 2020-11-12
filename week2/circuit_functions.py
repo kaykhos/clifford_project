@@ -9,6 +9,7 @@ Some code copied from qcoptim to generate circuits
 """
 import qiskit as qk
 import numpy as np
+import itertools as it
 
 def newCircuit(nb_qubits =4 , 
                depth = 1,
@@ -91,6 +92,15 @@ def updateCircuit(circuit,
         print(circuit)
         
     return circuit
+
+def _genU3CliffordParameters():
+    """
+    Returns an array of all possible u3 parameters that give clifford 
+    circuits. Note this is over parameterised, and two unique elements in this
+    array may correspond to the same circuit"""
+    base = np.arange(0, 4)/2 * np.pi # mutiples of pi/2
+    all_combinations = list(it.product(*[base]*3))
+    return np.array(all_combinations)
 
 
 # Quick test to make sure everyhing goes smoothly
