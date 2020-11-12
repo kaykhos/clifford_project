@@ -11,19 +11,16 @@ import qiskit as qk
 import numpy as np
 import itertools as it
 
+
+# Need in this name space for qiskits eval() of parameters
+pi = np.pi
+
+
 def newCircuit(nb_qubits = 4, 
                depth = 1,
                verbose = False):
     """
     Creates a new random 'cliffod' circuit"""
-    if verbose:
-        Warning("Currently only makes a reduced Clifford circuit")
-    
-    # Construct circuit
-    circuit = qk.QuantumCircuit(nb_qubits)
-    # Need to increase the gate set here... maybe this isn't the best way
-    # Might need to use u3 params instead, but this will do for now
-    single_rotatoins = _genU3CliffordParameters()
     
     def entangle_layer(circ):
         """
@@ -36,11 +33,12 @@ def newCircuit(nb_qubits = 4,
     def rotaiton_layer(circ):
         """
         Creates a layer of single qubit rotations based on the list 'single_rotatoins'"""
-        random_points = np.random.randint(0, len(single_rotatoins), circ.num_qubits)
-        for ii in range(circ.num_qubits):
-            circ.u(*single_rotatoins[random_points[ii]], ii)
-            #single_rotatoins[random_points[ii]](ii)
+        cliffod_params = _newCliffordParams(circ.num_qubits)
+        for ii, param in enumerate(cliffod_params):
+            circ.u(*param, ii)
     
+    # Construct circuit
+    circuit = qk.QuantumCircuit(nb_qubits)
 
     # Apply first rotation layer (else CX layer does nothing)
     rotaiton_layer(circuit)
@@ -61,10 +59,7 @@ def updateCircuit(circuit,
     Takes an input circuit and switches exactly 1 single qubit gate to something 
     else. (Only tested with circuis made with newCircuit())
     """
-    if verbose:
-        Warning("Currently only replaces to h,s,x,y,z gates")
-    possible_gates = _genU3CliffordParameters()
-    
+ 
     # Convert circuit to qasm string so we can use string processing to switch
     qasm = circuit.qasm().split(';')
     
@@ -76,10 +71,11 @@ def updateCircuit(circuit,
     
     # Get a new gate and make sure it's different form the current gate
     this_gate = qasm[gate_to_switch][2:].split(' ')[0]
-    new_gate = possible_gates[np.random.randint(0, len(possible_gates))]
+    new_gate = _newCliffordParams()
     while new_gate == eval(this_gate):
-        new_gate = possible_gates[np.random.randint(0, len(possible_gates))]
-    
+        new_gate = _newCliffordParams()
+        
+    # Update the new parameters in the qasm string
     qasm[gate_to_switch] = '\nu' + str(new_gate) + ' ' + qasm[gate_to_switch].split(' ')[1]
     
     qasm = ';'.join(qasm)    
@@ -90,37 +86,30 @@ def updateCircuit(circuit,
         
     return circuit
 
-def _genU3CliffordParameters():
-    """
-    Returns an array of all possible u3 parameters that give clifford 
-    circuits. Note this is over parameterised, and two unique elements in this
-    array may correspond to the same circuit"""
-    
-    # make basis gates (didn't want to import a new library)
-    ident = np.identity(2)
-    hadamard = np.array([[1, 1], [1, -1]])/np.sqrt(2)
-    sgate = np.diag([1,1j])    
-    pauli_x = np.diag([1], 1) + np.diag([1], -1)
-    pauli_y = 1j*(-np.diag([1], 1) + np.diag([1], -1))
-    pauli_z = np.diag([1,-1])
-
-    base_gates = [ident,hadamard,sgate,
-                  pauli_x,pauli_y,pauli_z]
-    signs = [1, -1, 1j, -1j]
-    
-    all_gates = [ss*gate for ss in signs for gate in base_gates]
-    
-    pi = np.pi
-    return [_u3ParamsFromGateMatrix(gate) for gate in all_gates]
-
 
 def _u3ParamsFromGateMatrix(gate):
+    """
+    Takes in input single qubit gate as a matrix, and outputs the 
+    required qiskit u3 params"""
     circ = qk.QuantumCircuit(1)
     circ.unitary(gate, 0)
     circ = circ.decompose()
     params = circ.qasm().split('u3')[1].split(' ')[0]
     return eval(params)
 
+
+def _newCliffordParams(count=1):
+    """
+    Uses qiskits inbuilt single qubit clifford gate sampler and returns the 
+    u3 parameters required. count = nubmer of random clifford circuits you want
+    """
+    gates = [qk.quantum_info.random_clifford(1).to_matrix() for ii in range(count)]
+    params = [_u3ParamsFromGateMatrix(gg) for gg in gates]
+    if count == 1:
+        return params[0]
+    else:
+        return params
+        
 
 # Quick test to make sure everyhing goes smoothly
 if __name__ == '__main__':
