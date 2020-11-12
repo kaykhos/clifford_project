@@ -11,7 +11,7 @@ import qiskit as qk
 import numpy as np
 import itertools as it
 
-def newCircuit(nb_qubits =4 , 
+def newCircuit(nb_qubits = 4, 
                depth = 1,
                verbose = False):
     """
@@ -23,11 +23,7 @@ def newCircuit(nb_qubits =4 ,
     circuit = qk.QuantumCircuit(nb_qubits)
     # Need to increase the gate set here... maybe this isn't the best way
     # Might need to use u3 params instead, but this will do for now
-    single_rotatoins = [circuit.h,
-                        circuit.s,
-                        circuit.x,
-                        circuit.y,
-                        circuit.z]
+    single_rotatoins = _genU3CliffordParameters()
     
     def entangle_layer(circ):
         """
@@ -40,11 +36,11 @@ def newCircuit(nb_qubits =4 ,
     def rotaiton_layer(circ):
         """
         Creates a layer of single qubit rotations based on the list 'single_rotatoins'"""
-        random_points0 = np.random.randint(0, len(single_rotatoins), circ.num_qubits)
-        random_points1 = np.random.randint(0, len(single_rotatoins), circ.num_qubits)
+        random_points = np.random.randint(0, len(single_rotatoins), circ.num_qubits)
         for ii in range(circ.num_qubits):
-            single_rotatoins[random_points0[ii]](ii)
-            single_rotatoins[random_points1[ii]](ii)
+            circ.u(*single_rotatoins[random_points[ii]], ii)
+            #single_rotatoins[random_points[ii]](ii)
+    
 
     # Apply first rotation layer (else CX layer does nothing)
     rotaiton_layer(circuit)
@@ -67,7 +63,7 @@ def updateCircuit(circuit,
     """
     if verbose:
         Warning("Currently only replaces to h,s,x,y,z gates")
-    possible_gates = list('hsxyz')
+    possible_gates = _genU3CliffordParameters()
     
     # Convert circuit to qasm string so we can use string processing to switch
     qasm = circuit.qasm().split(';')
@@ -79,12 +75,12 @@ def updateCircuit(circuit,
         gate_to_switch = np.random.randint(3,len(qasm)-1)
     
     # Get a new gate and make sure it's different form the current gate
-    this_gate = qasm[gate_to_switch][1]
-    new_gate = np.random.choice(possible_gates)
-    while new_gate == this_gate:
-        new_gate = np.random.choice(possible_gates)
+    this_gate = qasm[gate_to_switch][2:].split(' ')[0]
+    new_gate = possible_gates[np.random.randint(0, len(possible_gates))]
+    while new_gate == eval(this_gate):
+        new_gate = possible_gates[np.random.randint(0, len(possible_gates))]
     
-    qasm[gate_to_switch] = '\n' + new_gate + ' ' + qasm[gate_to_switch].split(' ')[1]
+    qasm[gate_to_switch] = '\nu' + str(new_gate) + ' ' + qasm[gate_to_switch].split(' ')[1]
     
     qasm = ';'.join(qasm)    
     circuit = qk.QuantumCircuit.from_qasm_str(qasm)
@@ -99,9 +95,31 @@ def _genU3CliffordParameters():
     Returns an array of all possible u3 parameters that give clifford 
     circuits. Note this is over parameterised, and two unique elements in this
     array may correspond to the same circuit"""
-    base = np.arange(0, 4)/2 * np.pi # mutiples of pi/2
-    all_combinations = list(it.product(*[base]*3))
-    return np.array(all_combinations)
+    
+    # make basis gates (didn't want to import a new library)
+    ident = np.identity(2)
+    hadamard = np.array([[1, 1], [1, -1]])/np.sqrt(2)
+    sgate = np.diag([1,1j])    
+    pauli_x = np.diag([1], 1) + np.diag([1], -1)
+    pauli_y = 1j*(-np.diag([1], 1) + np.diag([1], -1))
+    pauli_z = np.diag([1,-1])
+
+    base_gates = [ident,hadamard,sgate,
+                  pauli_x,pauli_y,pauli_z]
+    signs = [1, -1, 1j, -1j]
+    
+    all_gates = [ss*gate for ss in signs for gate in base_gates]
+    
+    pi = np.pi
+    return [_u3ParamsFromGateMatrix(gate) for gate in all_gates]
+
+
+def _u3ParamsFromGateMatrix(gate):
+    circ = qk.QuantumCircuit(1)
+    circ.unitary(gate, 0)
+    circ = circ.decompose()
+    params = circ.qasm().split('u3')[1].split(' ')[0]
+    return eval(params)
 
 
 # Quick test to make sure everyhing goes smoothly
