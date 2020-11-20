@@ -125,14 +125,14 @@ def Output_circuit():
         new_gates.append(output_gates[i])
     new_gates[Ord_Ga] = Ind_Ga
     for i in range (d):
-        for j in range (4):
-            gates(qubit_structure[4 * i + j], new_gates[4 * i + j], qc)
-        for j in range (0, 3, 2):   
-            qc.apply_gate('CNOT', j, j + 1, gate_round=1) 
-        for j in range (1, 3 ,2): 
+        for j in range (n):
+            gates(qubit_structure[n * i + j], target_gates[n * i + j], qc)
+        for j in range (0, n - 1, 2):   
             qc.apply_gate('CNOT', j, j + 1, gate_round=1)
-    for i in range (4 * d , 4 * d + 4):
-        gates(qubit_structure[i], new_gates[i], qc)
+        for j in range (1, n - 1 ,2): 
+            qc.apply_gate('CNOT', j, j + 1, gate_round=1)
+    for i in range (n * d , n * d + n):
+        gates(qubit_structure[i], target_gates[i], qc)
     
     psi = qc.to_dense()
     E = np.real(1 - ( psi.H @ target )*( target.H @ psi ))
