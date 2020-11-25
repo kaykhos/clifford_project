@@ -8,8 +8,7 @@ import random
 import numpy as np
 import pandas as pd
 import sys
-import circuit_functions as cf
-sys.path.append("/Users/arthur/Desktop/physics/MSci/clifford_project/week4")
+import scipy.linalg as la
 # %% randomly generate circuit
 
 
@@ -55,8 +54,8 @@ def qcnewcircuit(nb_qubits, depth):
     return circuit
 
 
-def ising(n, jz=1.0, h=0.0, **ham_opts):
-    return qu.ham_heis(n, j=(0, 0, jz), b=(h, 0, h), **ham_opts)
+def ising(n, jz=1.0, h=0.0, **ham_opts):  # generate Ising Hamiltonian with X and Z fields
+    return qu.ham_heis(n, j=(0, 0, jz), b=(h, 0, h), cyclic=False, **ham_opts)
 
 
 applied_gates = []
@@ -65,7 +64,7 @@ gate_list = ['H', 'X', 'Y',
              'Z', 'IDEN', 'S']
 
 
-def random_apply_gate(n, d):
+def random_apply_gate(n, d):  # randomly select gate here, gate is selected from gate_list
     def random_select_gate_from_list():
         gate_to_select = gate_list.copy()
         if len(applied_gates) > 0:
@@ -74,13 +73,13 @@ def random_apply_gate(n, d):
         applied_gates.insert(0, random_gate)
         gate_choice.insert(0, random_gate)
     random_select_gate_from_list()
-    max = n - 1 + 4 * d
+    max = n - 1 + n * d
     num = random.randint(0, max)
     operations.pop(num)
     operations.insert(num, applied_gates[0])
 
 
-def update_qc(nb_qubits, depth=1):
+def update_qc(nb_qubits, depth=1):  # compute the circuit, with CNOT and single qubit gates
 
     circuit = qtn.Circuit(N=nb_qubits)
 
@@ -105,78 +104,41 @@ def update_qc(nb_qubits, depth=1):
 
 # %% Ising model Hamiltonian
 data = {}
-# def _ham_ising(j=1.0, h=0.0, *, S=1 / 2, cyclic=False):
-#     H = qt_gen.SpinHam(S=1 / 2, cyclic=cyclic)
-#     H += j, 'Z', 'Z'
-#     H -= h, 'X'
-#     H -= h, 'Z'
-#     return H
-#
-#
-#
-# def ham_1d_ising(n, j=1.0, h=0.0, *, S=1 / 2,cyclic=False, **mpo_opts):
-#     r"""Ising Hamiltonian in nni form.
-#
-#     .. math::
-#
-#         H_\mathrm{Ising} =
-#         J \sum_{i} \sigma^Z_i \sigma^Z_{i + 1} -
-#         h \sum_{i} \sigma^X_i
-#
-#     Note the default convention of antiferromagnetic interactions and spin
-#     operators not Pauli matrices.
-#
-#     Parameters
-#     ----------
-#     L : int
-#         The number of sites.
-#     j : float, optional
-#         The ZZ interaction strength. Positive is antiferromagnetic.
-#     bx : float, optional
-#         The X-magnetic field strength.
-#     S : {1/2, 1, 3/2, ...}, optional
-#         The underlying spin of the system, defaults to 1/2.
-#     cyclic : bool, optional
-#         Generate a hamiltonian with periodic boundary conditions or not,
-#         default is open boundary conditions.
-#     mpo_opts or local_ham_1d_opts
-#         Supplied to :class:`~quimb.tensor.tensor_1d.LocalHam1D`.
-#
-#     Returns
-#     -------
-#     NNI
-#     """
-#     H = _ham_ising(j=j, h=h, S=S, cyclic=cyclic)
-#     return H.build_mpo(n, **mpo_opts)
+
 for a in range(100):
-    qc = qcnewcircuit(8, 3)
+    qc = qcnewcircuit(4, 4)
     operations = op_list.copy()
-    E1 = 2
+    op_copy = op_list.copy()
+    E1 = 5
     t0 = 0
     exec(f'E_{a} = np.array([])')
     exec(f't_{a} = np.array([])')
-    for i in range(100):
-        qc_new = update_qc(8, depth=3)
+    for i in range(1000):
+        qc_new = update_qc(4, depth=4)
         psi = qc_new.to_dense()
-        Ham = ising(8, jz=1.0, h=-0.0)
+        Ham = ising(4, jz=1.0, h=0.5 * 1)
         E2 = np.real(qu.core.expectation(psi, Ham))
-        if abs(E1) > abs(E2):
+        if E1 > E2:
             P = 1
         else:
-            beta = 10
+            beta = 5
             P = np.exp(beta * (E1 - E2))
         random_prob = random.random()
         if random_prob < P:  # accept the new value
             exec(f'E_{a}=np.append(E_{a}, E2)')
             exec(f't_{a}=np.append(t_{a}, i)')
             E1 = E2
-
+            op_copy = operations.copy()
         else:  # not accept the new value
             exec(f'E_{a}=np.append(E_{a}, E1)')
             exec(f't_{a}=np.append(t_{a}, i)')
+            operations = op_copy.copy()
 
-        random_apply_gate(8, 3)
-
+        random_apply_gate(4, 4)
+        random_apply_gate(4, 4)
+        random_apply_gate(4, 4)
+        random_apply_gate(4, 4)
+        random_apply_gate(4, 4)
     exec(f'data["E_{a}"] = E_{a}')
 
 # print(Energy)
@@ -186,29 +148,50 @@ data["t"] = t_0
 df = pd.DataFrame(data)
 cols_to_sum = df.columns[: df.shape[1] - 1]
 df['average'] = df[cols_to_sum].sum(axis=1) / len(df.columns)
-df.to_csv("ising_h0.csv", index=False)
-
+df.to_csv("ising_n4d4_h1_beta5.csv", index=False)
 
 # %%
+average = df['average']
+t = df['t']
+plt.figure(figsize=(18, 16), dpi=100)
+plt.xlabel('time', fontsize=20)
+plt.ylabel('E', fontsize=20)
+plt.xticks(fontsize=20)
+plt.yticks(fontsize=20)
+plt.plot(t, average, color='skyblue', label='depth=1')
+
+# %%
+print(Ham)
+# S = Ham @ Ham.T
+
+evals, evecs = la.eig(Ham)
+print(4 * evals.real)
+min_eval = (4 * evals.real).min()
+print(min_eval)
+print(evecs)
+# %%
+min_values = df.min()
+print(min_values.min())
 t_star = []
 for i in range(100):
     exec(f'colm= df["E_{i}"]')
-    exec(f'E{i}=df[colm == 0].index.tolist()')
+    exec(f'E{i}=df[colm < -0.999].index.tolist()')
     exec(f'a = len(E{i})')
     if a == 0:
         a = 0
     else:
         exec(f't_star.append(E{i}[0])')
 
-s_30 = len([i for i in t_star if i < 30])
-P = s_30 / len(t_star)
+s_400 = len([i for i in t_star if i < 400])
+P = s_400 / len(t_star)
 plt.grid(axis='y', alpha=0.75)
 plt.xlabel(r'$t^*$')
 plt.ylabel('Probability')
 plt.title(r'Probability distribution for h=0')
-plt.text(30, 0.3, f'P($t^* < 30$)={P}')
+plt.text(400, 0.2, f'P($t^* < 400$)={P}')
+plt.text(400, 0.25, f'Total number in 100 runs={len(t_star)}')
 plt.hist(t_star, weights=np.ones(len(t_star)) / len(t_star), bins=10,
          color='#0504aa', alpha=0.9, rwidth=0.5, align='right')
 plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
 # plt.show()
-plt.savefig(fname="100run_h=0.png", figsize=(18, 16), dpi=400)
+# plt.savefig(fname="100run_h=0.png", figsize=(18, 16), dpi=400)
