@@ -9,22 +9,53 @@ import numpy as np
 import pandas as pd
 import sys
 import scipy.linalg as la
-# %% randomly generate circuit
+# %% full single qubit Clifford gates
+cliff_gates = []
+for i in range(24):
+    cliff_gates.append(i + 1)
+gate1 = ['IDEN']
+gate2 = ['H']
+gate3 = ['S']
+gate4 = ['X']
+gate5 = ['Y']
+gate6 = ['Z']
+gate7 = ['H', 'S']
+gate8 = ['S', 'H']
+gate9 = ['S', 'S', 'S']
+gate10 = ['S', 'H', 'S']
+gate11 = ['S', 'S', 'H']
+gate12 = ['H', 'S', 'H']
+gate13 = ['H', 'S', 'S']
+gate14 = ['H', 'S', 'S', 'S']
+gate15 = ['H', 'S', 'H', 'S']
+gate16 = ['S', 'H', 'S', 'S']
+gate17 = ['S', 'S', 'H', 'S']
+gate18 = ['S', 'H', 'S', 'S', 'H']
+gate19 = ['S', 'S', 'H', 'S', 'S']
+gate20 = ['H', 'S', 'S', 'H', 'S']
+gate21 = ['S', 'S', 'H', 'S', 'H']
+gate22 = ['S', 'H', 'S', 'S', 'S']
+gate23 = ['H', 'S', 'H', 'S', 'S']
+gate24 = ['S', 'H', 'S', 'S', 'H', 'S']
+# for random_number in cliff_gates:
+#     random_number = random.choice(cliff_gates)
+#     exec(f'random_gate= gate{random_number}')
 
+
+# %% randomly generate circuit
 
 def qcnewcircuit(nb_qubits, depth):
     """
     Creates a new random 'cliffod' circuit"""
     Warning("Currently only makes a reduced Clifford circuit")
-    global op_list, applied_qubits, entangle_layer
+    global op_list
     op_list = []
-    applied_qubits = []
     # Construct circuit
     circuit = qtn.Circuit(N=nb_qubits)
     # Need to increase the gate set here... maybe this isn't the best way
     # Might need to use u3 params instead, but this will do for now
-    gate_list = ['H', 'X', 'Y',
-                 'Z', 'IDEN', 'S']
+    # gate_list = ['H', 'X', 'Y',
+    #              'Z', 'IDEN', 'S']
 
     def entangle_layer(circ):
         """
@@ -41,9 +72,15 @@ def qcnewcircuit(nb_qubits, depth):
         # random_points = np.random.randint(
         #     0, len(gate_list), circ.num_qubits)
         for ii in range(nb_qubits):
-            random_gate = random.choice(gate_list)
-            circ.apply_gate(random_gate, ii)
-            op_list.append(random_gate)
+            # for random_number in cliff_gates:
+            random_number = random.choice(cliff_gates)
+            exec(f'random_gate= gate{random_number}', globals(), globals())
+            op_list.append(random_number)
+            x = len(random_gate)
+            for j in range(x):
+                gate = random_gate[j]
+                circ.apply_gate(gate, ii)
+
     # Apply first rotation layer (else CX layer does nothing)
     rotaiton_layer(circuit)
 
@@ -60,18 +97,20 @@ def ising(n, jz=1.0, h=0.0, **ham_opts):  # generate Ising Hamiltonian with X an
 
 applied_gates = []
 gate_choice = []
-gate_list = ['H', 'X', 'Y',
-             'Z', 'IDEN', 'S']
+# gate_list = ['H', 'X', 'Y',
+#              'Z', 'IDEN', 'S']
 
 
 def random_apply_gate(n, d):  # randomly select gate here, gate is selected from gate_list
     def random_select_gate_from_list():
-        gate_to_select = gate_list.copy()
+        gate_to_select = cliff_gates.copy()
         if len(applied_gates) > 0:
             gate_to_select.remove(gate_choice[0])
-        random_gate = random.choice(gate_to_select)
-        applied_gates.insert(0, random_gate)
-        gate_choice.insert(0, random_gate)
+        # for random_number in cliff_gates:
+        random_number = random.choice(cliff_gates)
+        exec(f'random_select_gate= gate{random_number}')
+        applied_gates.insert(0, random_number)
+        gate_choice.insert(0, random_number)
     random_select_gate_from_list()
     max = n - 1 + n * d
     num = random.randint(0, max)
@@ -80,7 +119,7 @@ def random_apply_gate(n, d):  # randomly select gate here, gate is selected from
 
 
 def update_qc(nb_qubits, depth=1):  # compute the circuit, with CNOT and single qubit gates
-
+    global gate_number, gate_apply
     circuit = qtn.Circuit(N=nb_qubits)
 
     def entangle_layer(circ):
@@ -90,15 +129,50 @@ def update_qc(nb_qubits, depth=1):  # compute the circuit, with CNOT and single 
             circ.apply_gate('CNOT', ii, ii + 1)
         for ii in range(1, nb_qubits - 1, 2):
             circ.apply_gate('CNOT', ii, ii + 1)
+
+    def apply_rotation_gates(n, d, qubit):
+        gate_number = operations[n * d + qubit]
+        e = '{}'.format(gate_number)
+        q = 'gate_apply=gate' + e + '.copy()'
+        exec(q, globals(), globals())
+        b = len(gate_apply)
+        for l in range(0, b, 1):
+            x = gate_apply[l]
+            circuit.apply_gate(x, qubit)
+
+    def last_rotation_layer(n, qubit):
+
+        gate_number = operations[n]
+
+        e = '{}'.format(gate_number)
+        q = 'gate_last=gate' + e + '.copy()'
+        exec(q, globals(), globals())
+        c = len(gate_last)
+        for l in range(0, c, 1):
+            x = gate_last[l]
+            circuit.apply_gate(x, qubit)
+
     for d in range(depth):
-        for i in range(nb_qubits):
-            x = operations[nb_qubits * d + i]
-            circuit.apply_gate(x, i)
+        for ii in range(nb_qubits):
+            # gate_number= operations[nb_qubits * d + i]
+            # exec(f'gate_to_apply= gate{gate_number}')
+            # b=len(gate_to_apply)
+            # for l in range(0,b,1):
+            #     x=gate_to_apply[l]
+            #     circuit.apply_gate(x, i)
+            apply_rotation_gates(nb_qubits, d, ii)
             entangle_layer(circuit)
     for j in range(nb_qubits * depth, nb_qubits + nb_qubits * depth):
-        for iii in range(nb_qubits):
-            x = operations[j]
-            circuit.apply_gate(x, iii)
+        for i in range(nb_qubits):
+            last_rotation_layer(j, i)
+            # gate_number= operations[j]
+            # exec(f'gate_to_apply_last= gate{gate_number}')
+            # c=len(gate_to_apply_last)
+            # for l in range(0,c,1):
+            #     x=gate_to_apply_last[j]
+            #     circuit.apply_gate(x, iii)
+            # x = operations[j]
+            # circuit.apply_gate(x, iii)
     return circuit
 
 
@@ -121,7 +195,7 @@ for a in range(100):
         if E1 > E2:
             P = 1
         else:
-            beta = 5
+            beta = 10
             P = np.exp(beta * (E1 - E2))
         random_prob = random.random()
         if random_prob < P:  # accept the new value
@@ -135,10 +209,10 @@ for a in range(100):
             operations = op_copy.copy()
 
         random_apply_gate(4, 4)
-        random_apply_gate(4, 4)
-        random_apply_gate(4, 4)
-        random_apply_gate(4, 4)
-        random_apply_gate(4, 4)
+        # random_apply_gate(4, 4)
+        # random_apply_gate(4, 4)
+        # random_apply_gate(4, 4)
+        # random_apply_gate(4, 4)
     exec(f'data["E_{a}"] = E_{a}')
 
 # print(Energy)
@@ -148,7 +222,7 @@ data["t"] = t_0
 df = pd.DataFrame(data)
 cols_to_sum = df.columns[: df.shape[1] - 1]
 df['average'] = df[cols_to_sum].sum(axis=1) / len(df.columns)
-df.to_csv("ising_n4d4_h1_beta5.csv", index=False)
+df.to_csv("ising_n4d4_h1_beta10_fullcliff.csv", index=False)
 
 # %%
 average = df['average']
