@@ -174,7 +174,7 @@ def random_string():
     global string
     pauli = ['x', 'y', 'z', 'i']
     string = []
-    for i in range(8):
+    for i in range(16):
         random_string = random.choice(pauli)
         string.append(random_string)
 
@@ -188,77 +188,88 @@ def random_ham():
     b = np.kron(pauli(string[2]), pauli(string[3]))
     c = np.kron(pauli(string[4]), pauli(string[5]))
     d = np.kron(pauli(string[6]), pauli(string[7]))
-    ham = np.kron(a, b) + np.kron(c, d)
+    e = np.kron(pauli(string[8]), pauli(string[9]))
+    f = np.kron(pauli(string[10]), pauli(string[11]))
+    g = np.kron(pauli(string[12]), pauli(string[13]))
+    h = np.kron(pauli(string[14]), pauli(string[15]))
+    ham = np.kron(a, b) + np.kron(c, d) + np.kron(e, f) + np.kron(g, h)
 
     return ham
 
 
 # %%find eigenvalues of Hamiltonian
 test_ham = random_ham()
-print(test_ham)
+# print(test_ham)
 # S = Ham @ Ham.T
 
 evals, evecs = la.eig(test_ham)
-print(4 * evals.real)
-min_eval = (4 * evals.real).min()
+# print(4 * evals.real)
+min_eval = (evals.real).min()
 print(min_eval)
-print(evecs)
+# print(evecs)
 
 # %%
+min_eigenvalue = []
+min_circuit = []
+for t in range(3):
+    data = {}
+    Ham = random_ham()
+    evals, evecs = la.eig(Ham)
+    min_eval = (evals.real).min()
 
-data = {}
-Ham = random_ham()
-evals, evecs = la.eig(Ham)
-min_eval = (4 * evals.real).min()
-print(min_eval)
+    for a in range(100):
+        qc = qcnewcircuit(4, 4)
+        operations = op_list.copy()
+        op_copy = op_list.copy()
+        E1 = 5
+        t0 = 0
+        exec(f'E_{a} = np.array([])')
+        exec(f't_{a} = np.array([])')
+        for i in range(1000):
+            qc_new = update_qc(4, depth=4)
+            psi = qc_new.to_dense()
+            # Ham = random_ham()
+            E2 = np.real(qu.core.expectation(psi, Ham))
+            if E1 > E2:
+                P = 1
+            else:
+                beta = 10
+                P = np.exp(beta * (E1 - E2))
+            random_prob = random.random()
+            if random_prob < P:  # accept the new value
+                exec(f'E_{a}=np.append(E_{a}, E2)')
+                exec(f't_{a}=np.append(t_{a}, i)')
+                E1 = E2
+                op_copy = operations.copy()
+            else:  # not accept the new value
+                exec(f'E_{a}=np.append(E_{a}, E1)')
+                exec(f't_{a}=np.append(t_{a}, i)')
+                operations = op_copy.copy()
 
-for a in range(100):
-    qc = qcnewcircuit(4, 1)
-    operations = op_list.copy()
-    op_copy = op_list.copy()
-    E1 = 5
-    t0 = 0
-    exec(f'E_{a} = np.array([])')
-    exec(f't_{a} = np.array([])')
-    for i in range(1000):
-        qc_new = update_qc(4, depth=1)
-        psi = qc_new.to_dense()
-        # Ham = random_ham()
-        E2 = np.real(qu.core.expectation(psi, Ham))
-        if E1 > E2:
-            P = 1
-        else:
-            beta = 10
-            P = np.exp(beta * (E1 - E2))
-        random_prob = random.random()
-        if random_prob < P:  # accept the new value
-            exec(f'E_{a}=np.append(E_{a}, E2)')
-            exec(f't_{a}=np.append(t_{a}, i)')
-            E1 = E2
-            op_copy = operations.copy()
-        else:  # not accept the new value
-            exec(f'E_{a}=np.append(E_{a}, E1)')
-            exec(f't_{a}=np.append(t_{a}, i)')
-            operations = op_copy.copy()
+            random_apply_gate(4, 4)
 
-        random_apply_gate(4, 1)
+        exec(f'data["E_{a}"] = E_{a}')
 
-    exec(f'data["E_{a}"] = E_{a}')
+    # print(min_eval)
 
-
-data["t"] = t_0
-df = pd.DataFrame(data)
-cols_to_sum = df.columns[: df.shape[1] - 1]
-df['average'] = df[cols_to_sum].sum(axis=1) / len(df.columns)
-# df.to_csv("random_pauli_n4d1_test1.csv", index=False)
-
+    data["t"] = t_0
+    df = pd.DataFrame(data)
+    cols_to_sum = df.columns[: df.shape[1] - 1]
+    df['average'] = df[cols_to_sum].sum(axis=1) / len(df.columns)
+    min_value = df.min()
+    min_data = min_value.min()
+    min_circuit.append(min_data)
+    min_eigenvalue.append(min_eval)
+    exec(f'df.to_csv("random_pauli_n4d4_3{t}.csv", index=False)')
+print(min_eigenvalue)
+print(min_circuit)
 # %%plotting
 min_values = df.min()
-print(min_values.min() * 4)
+print(min_values.min())
 t_star = []
 for i in range(100):
     exec(f'colm= df["E_{i}"]')
-    exec(f'E{i}=df[colm < -0.999].index.tolist()')
+    exec(f'E{i}=df[colm < -0.99].index.tolist()')
     exec(f'a = len(E{i})')
     if a == 0:
         a = 0
