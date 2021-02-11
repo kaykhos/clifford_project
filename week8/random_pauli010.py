@@ -368,13 +368,22 @@ target = qtn.Dense1D(gs)
 
 
 def negative_overlap(psi, target):
-    return - (psi.H @ target) ** 2
+    a = 1 - abs((psi.H & target).contract(all, optimize='auto-hq')) / 2**4
+    return a
 
 
 V1 = qtn.MPS_product_state(V.to_dense())
+V.psi.graph()
+target.graph()
+
+print(V1)
 
 
-negative_overlap(V1, target)
+def loss(V, U):
+    return 1 - abs((V.H & U).contract(all, optimize='auto-hq')) / 2**n
+
+
+negative_overlap(V.psi, target)
 # def loss(V, U):
 #     return 1 - abs((V.H & U).contract(all, optimize='auto-hq')) / 2**n
 #     # return 1-qu.calc.fidelity(V,U)
@@ -388,7 +397,7 @@ def normalize_state(psi):
 
 
 tnopt = qtn.optimize.TNOptimizer(
-    V1,                        # the tensor network we want to optimize
+    V.psi,                        # the tensor network we want to optimize
     loss_fn=negative_overlap,
     # norm_fn=normalize_state,                    # the function we want to minimize
     # supply U to the loss function as a constant TN
