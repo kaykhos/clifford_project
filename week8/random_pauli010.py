@@ -8,6 +8,7 @@ import random
 import numpy as np
 import pandas as pd
 import scipy.linalg as la
+%config InlineBackend.figure_formats = ['svg']
 # %%full single qubit clifford gates
 cliff_gates = []
 for i in range(24):
@@ -153,7 +154,7 @@ def update_qc(nb_qubits, depth=1):  # compute the circuit, with CNOT and single 
             #     x=gate_to_apply[l]
             #     circuit.apply_gate(x, i)
             apply_rotation_gates(nb_qubits, d, ii)
-            entangle_layer(circuit)
+        entangle_layer(circuit)
     for j in range(nb_qubits * depth, nb_qubits + nb_qubits * depth):
         for i in range(nb_qubits):
             last_rotation_layer(j, i)
@@ -215,10 +216,12 @@ evals, evecs = la.eig(test_ham)
 min_eval = (evals).min()
 index = np.where(evals == min_eval)[0]
 evec_min = evecs[:, index[0]]
-qc1 = qcnewcircuit(4, 1)
+qc1 = qcnewcircuit(4, 4)
 psi1 = qc1.to_dense()
 infide = 1 - overlap_modules_square(psi1, evec_min)
-print(infide)
+infide
+print(evec_min)
+1 - qu.calc.fidelity(psi1, evec_min)
 
 # %%
 # min_eigenvalue = []
@@ -245,12 +248,12 @@ for t in range(1):
             qc_new = update_qc(4, depth=4)
             psi = qc_new.to_dense()
             # Ham = random_ham()
-            E2 = 1 - overlap_modules_square(psi, evec_min)
+            E2 = 1 - qu.calc.fidelity(psi, evec_min)
             Energy = np.real(qu.core.expectation(psi, Ham))
             if E3 > E2:
                 P = 1
             else:
-                beta = 22
+                beta = 25
                 P = np.exp(beta * (E3 - E2))
             random_prob = random.random()
             if random_prob < P:  # accept the new value
@@ -298,6 +301,110 @@ plt.plot(t_0, infid, color='skyblue', label='depth=1')
 plt.legend()
 plt.show()
 # %% minimization algorithm
+operations_mycircuit = op_copy.copy()
+
+
+# compute the circuit, with CNOT and single qubit gates, adding U 3 gates for optimization
+def my_circuit(nb_qubits, depth=1):
+    global gate_numbers, gates_apply
+    circuit = qtn.Circuit(N=nb_qubits)
+
+    def entangle_layer(circ, gate_round=None):
+        """
+        Creates a linear entangeling layer"""
+        for ii in range(0, nb_qubits - 1, 2):
+            circ.apply_gate('CNOT', ii, ii + 1, gate_round=gate_round)
+        for ii in range(1, nb_qubits - 1, 2):
+            circ.apply_gate('CNOT', ii, ii + 1, gate_round=gate_round)
+
+    def apply_rotation_gates(n, d, qubit, gate_round=None):
+        gate_numbers = operations_mycircuit[n * d + qubit]
+        e = '{}'.format(gate_numbers)
+        q = 'gates_apply=gate' + e + '.copy()'
+        exec(q, globals(), globals())
+        b = len(gates_apply)
+        for l in range(0, b, 1):
+            x = gates_apply[l]
+            circuit.apply_gate(x, qubit, gate_round=gate_round)
+
+    def last_rotation_layer(n, qubit, gate_round=None):
+
+        gate_numbers = operations_mycircuit[n]
+
+        e = '{}'.format(gate_numbers)
+        q = 'gate_last=gate' + e + '.copy()'
+        exec(q, globals(), globals())
+        c = len(gate_last)
+        for l in range(0, c, 1):
+            x = gate_last[l]
+            circuit.apply_gate(x, qubit, gate_round=gate_round)
+
+    def U3_gates(qubit, gate_round=None):
+        circuit.apply_gate('U3', 0, 0, 0, qubit, gate_round=gate_round)
+
+    for d in range(depth):
+        for ii in range(nb_qubits):
+            apply_rotation_gates(nb_qubits, d, ii, gate_round=d)
+            U3_gates(ii, gate_round=d)
+        entangle_layer(circuit, gate_round=d)
+    for j in range(nb_qubits * depth, nb_qubits + nb_qubits * depth):
+        for i in range(nb_qubits):
+            last_rotation_layer(j, i, gate_round=depth)
+            U3_gates(i, gate_round=depth)
+
+    return circuit
+
+
+circ_with_U3 = my_circuit(4, 4)
+
+
+# circ_with_U3.psi.graph(color=['PSI0'] + [f'ROUND_{i}' for i in range(5)])
+V = circ_with_U3
+H_0 = Ham
+
+
+gs = qu.groundstate(H_0)
+target = qtn.Dense1D(gs)
+
+
+def negative_overlap(psi, target):
+    return - (psi.H @ target) ** 2
+
+
+V1 = qtn.MPS_product_state(V.to_dense())
+
+
+negative_overlap(V1, target)
+# def loss(V, U):
+#     return 1 - abs((V.H & U).contract(all, optimize='auto-hq')) / 2**n
+#     # return 1-qu.calc.fidelity(V,U)
+
+
+def normalize_state(psi):
+    return psi / (psi.H @ psi) ** 0.5
+
+# def negative_overlap(V, target):
+#     return - np.real(qu.core.expectation(V.to_dense(), target.to_dense()))
+
+
+tnopt = qtn.optimize.TNOptimizer(
+    V1,                        # the tensor network we want to optimize
+    loss_fn=negative_overlap,
+    # norm_fn=normalize_state,                    # the function we want to minimize
+    # supply U to the loss function as a constant TN
+    loss_constants={'target': target},
+    tags=['U3'],              # only optimize U3 tensors
+    autodiff_backend='auto',   # use 'autograd' for non-compiled optimization
+    optimizer='L-BFGS-B',     # the optimization algorithm
+)
+
+V_opt = tnopt.optimize(n=500)
+
+circ_with_U3.update_params_from(V_opt)
+
+# the basic gate specification
+circ_with_U3.gates
+# %%
 
 
 # %%plotting
