@@ -34,6 +34,7 @@ class SPSAWraper(TNOptimizer):
 
         """
         def optimize(maxiter: int = 1000,
+                     tol = None,
                      save_steps: int = 1,
                      c0: float = 0.62,
                      c1: float = 0.1,
@@ -47,6 +48,7 @@ class SPSAWraper(TNOptimizer):
             Parameters
             ----------
             maxiter: Maximum number of iterations to perform.
+            tol : None or float stops optim if tol is reached (default none - completes all steps)
             save_steps: Save intermediate info every save_steps step. It has a min. value of 1.
             last_avg: Averaged parameters over the last_avg iterations.
                 If last_avg = 1, only the last iteration is considered. It has a min. value of 1.
@@ -68,9 +70,21 @@ class SPSAWraper(TNOptimizer):
             if save_steps:
                 theta_vec = [theta]
                 cost_vec = [self.vectorized_value_and_grad(theta)[0]]
-          
             
-            for ii in tqdm(range(maxiter)):
+            
+            pbar = tqdm(total=maxiter, disable=not self.progbar)
+            def callback(_):
+                pbar.clear()
+                pbar.update()
+                val = round(self.loss, 5)
+                pbar.set_description(str(val))
+
+                if self.loss_target is not None:
+                    if self.loss < self.loss_target:
+                        # returning True doesn't terminate optimization
+                        raise KeyboardInterrupt
+            
+            for ii in range(maxiter):
             
                 a_spsa = float(_spsa_vars[0]) / ((ii + 1 + _spsa_vars[4])**_spsa_vars[2])
                 c_spsa = float(_spsa_vars[1]) / ((ii + 1)**_spsa_vars[3])
@@ -90,9 +104,16 @@ class SPSAWraper(TNOptimizer):
                     # updated theta
                     theta = theta - a_spsa * g_spsa
                 
+                callback(ii)
+                
+                if tol is not None:
+                    if (cost_plus + cost_minus)/2 < tol:
+                        break
+                    
                 if save_steps:
                     theta_vec.append(theta)
                     cost_vec.append(cost_plus/2+cost_minus/2)
+                
             
             result_dict = {'hyper_parameters':_spsa_vars,
                              'maxiter':maxiter,
@@ -103,9 +124,10 @@ class SPSAWraper(TNOptimizer):
                 result_dict['theta_history'] = theta_vec
                 result_dict['cost_history'] = cost_vec
             self.result_dict = result_dict
+            pbar.close()
+
             return self.inject_res_vector_and_return_tn()
         return optimize
-
 
 
 
@@ -140,7 +162,9 @@ if __name__ == "__main__":
                            autodiff_backend='tensorflow', 
                            optimizer='SPSA')
     #run 50 iterations of spsa
-    optimizer.optimize(200)
+    optimizer.optimize(100, tol= 1e-1)
     results = optimizer.result_dict
     print('final result is {}'.format(results['cost_opt']))
-        
+
+
+
