@@ -82,6 +82,7 @@ class SPSAWraper(TNOptimizer):
                 if self.loss_target is not None:
                     if self.loss < self.loss_target:
                         # returning True doesn't terminate optimization
+                        pbar.close()
                         raise KeyboardInterrupt
             
             for ii in range(maxiter):
@@ -108,6 +109,7 @@ class SPSAWraper(TNOptimizer):
                 
                 if tol is not None:
                     if (cost_plus + cost_minus)/2 < tol:
+                        pbar.close()
                         break
                     
                 if save_steps:
